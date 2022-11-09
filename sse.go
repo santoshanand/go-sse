@@ -46,6 +46,16 @@ func NewServer(options *Options) *Server {
 	return s
 }
 
+func isClosed(ch <-chan *Client) bool {
+	select {
+	case <-ch:
+		return true
+	default:
+	}
+
+	return false
+}
+
 func (s *Server) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	flusher, ok := response.(http.Flusher)
 
@@ -83,7 +93,9 @@ func (s *Server) ServeHTTP(response http.ResponseWriter, request *http.Request) 
 
 		go func() {
 			<-closeNotify
-			s.removeClient <- c
+			if isClosed(s.removeClient) == false {
+				s.removeClient <- c
+			}
 		}()
 
 		response.WriteHeader(http.StatusOK)
